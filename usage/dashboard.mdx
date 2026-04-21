@@ -1,0 +1,143 @@
+---
+title: "Navigating the PBS TUI dashboard"
+description: "Explore the five-tab PBS TUI dashboard: Jobs, Cluster grid, Nodes, Queues, and Help. Learn how to filter, sort, and inspect scheduler state."
+---
+
+The PBS TUI dashboard gives you a single-screen view of your PBS Pro cluster's current state. On launch, it fetches live data from `qstat` and `pbsnodes`, populates tables for jobs, nodes, and queues, and refreshes automatically every 30 seconds. Every element — from the summary bar at the top to the status bar at the bottom — updates in place so you can monitor workload health without running manual commands.
+
+## Summary bar
+
+The summary bar sits at the top of the dashboard and shows aggregate counts across the full snapshot:
+
+- **Jobs** — total number of jobs in the scheduler, with a parenthetical breakdown by state (e.g. `R:12, Q:5, H:2`). Each letter abbreviation maps to a full state label; see the [job state labels](#job-state-labels) table below.
+- **Nodes** — total node count and a per-state breakdown (e.g. `free:480, job-busy:64, down:8`).
+- **Queues** — enabled queues out of the total, shown as `enabled/total` (e.g. `6/8`).
+
+The summary updates on every data refresh so it always reflects the most recent snapshot.
+
+## Tabs overview
+
+The main content area is organized into five tabs. Use the tab bar to switch between views, or press the corresponding key binding to jump directly to a tab and give it focus.
+
+<Tabs>
+  <Tab title="Jobs">
+    The **Jobs** tab displays a sortable table of every job the scheduler knows about. Running jobs appear first, sorted by queue and then by job ID.
+
+    **Columns:**
+
+    | Column | Description |
+    |---|---|
+    | `#JobId` | Truncated job identifier (before the first `.`) |
+    | `User` | Submitting username |
+    | `Account` | Charge account for the job |
+    | `Queue` | Queue the job belongs to |
+    | `Nodes` | Node count and first exec host, e.g. `4 (x3001c0s1b0n0)` |
+    | `State` | Full state label, e.g. `Running`, `Queued`, `Held` |
+    | `WallTime` | Requested wall-clock time limit |
+    | `RunTime` | Elapsed runtime since the job started |
+    | `TimeRemaining` | Wall time minus runtime; `00:00:00` when expired |
+    | `QueuedTime` | Time spent waiting before the job started |
+    | `EstStart` | Scheduler's estimated (or actual) start time |
+    | `JobName` | Job name, truncated to 20 characters with a `…` suffix |
+
+    **Filtering:** type in the **Filter jobs** input above the table to narrow results. The filter is space-separated — every term you enter must match at least one column value in a row for that row to be shown. For example, entering `running alice` shows only jobs where both "running" and "alice" appear somewhere in the row.
+
+    **Sorting:** click any column header (or move focus to the table and press the relevant key) to sort rows by that column.
+
+    **Detail panel:** select any row to populate the right-side detail panel with all available fields for that job. Press `d` to toggle the panel on or off.
+  </Tab>
+  <Tab title="Cluster">
+    The **Cluster** tab renders a visual utilization map of all nodes in the cluster. Each character cell in the grid represents a proportional share of the total node pool.
+
+    - **Solid filled cells** (space character with a background color) represent individual large jobs. Each job's block is sized proportionally to its node count relative to the total cluster size. Jobs from different queues each get their own distinct color derived from the active theme.
+    - **Light-textured blocks** (`░`) represent aggregated queues (`debug`, `debug-scaling`, `preemptable`, `demand`, `tiny`, `small`, `medium`) whose jobs are merged into a single colored region per queue.
+    - **Hatched cells** (`▒`) indicate available (idle) nodes.
+
+    The **proportional legend bar** below the grid maps each color to its owner — showing the username, node count, queue name, and estimated time remaining for each job. Segments too narrow to display a label inline are listed as footnotes beneath the bar.
+
+    The **header** above the grid shows the current time, overall utilization percentage, total and running node counts, and running/queued job counts.
+
+    **Click any cell** to inspect the job or queue that owns it. The detail panel opens with full information about the selected job or queue, with a border color matching the clicked block.
+
+    Colors adapt automatically when you switch themes via the command palette.
+  </Tab>
+  <Tab title="Nodes">
+    The **Nodes** tab lists every compute node reported by `pbsnodes`, sorted alphabetically by name.
+
+    **Columns:**
+
+    | Column | Description |
+    |---|---|
+    | `Node` | Node hostname |
+    | `State` | Current state string from `pbsnodes` (e.g. `free`, `job-busy`, `down`) |
+    | `CPUs` | Number of logical CPUs (`ncpus`) reported for the node |
+    | `Jobs` | Count of job slots currently assigned to the node |
+    | `Comment` | Operator comment attached to the node, if any |
+
+    Select a row to open the detail panel with additional fields including NP (processors), properties, available and assigned resources, and the full comment.
+  </Tab>
+  <Tab title="Queues">
+    The **Queues** tab lists every queue returned by `qstat -Q`, sorted alphabetically by name.
+
+    **Columns:**
+
+    | Column | Description |
+    |---|---|
+    | `Queue` | Queue name |
+    | `Enabled` | Whether the queue accepts new job submissions (`Yes` / `No`) |
+    | `Started` | Whether the queue is actively routing jobs to execution (`Yes` / `No`) |
+    | `Queued` | Jobs in a waiting state (Q, W, or T) |
+    | `Running` | Jobs currently running (R) |
+    | `Held` | Jobs in a held or suspended state (H or S) |
+
+    Select a row to open the detail panel with additional fields including per-state job counts, default and maximum resource limits, and any comment on the queue.
+  </Tab>
+  <Tab title="Help">
+    The **Help** tab renders an in-app reference card with:
+
+    - A summary of all key bindings
+    - Instructions for the **Filter jobs** input
+    - A description of the detail panel
+    - Theme switching instructions — use the **Change theme** command in the command palette (`Ctrl+P`) to switch between `pbs-dark`, `pbs-light`, `ansi-dark`, and `ansi-light` without restarting
+
+    This tab is a read-only static view. You do not need network access or a live PBS cluster to view it.
+  </Tab>
+</Tabs>
+
+## Detail panel
+
+Selecting any row in the Jobs, Nodes, or Queues table — or clicking a cell in the Cluster grid — populates the detail panel on the right side of the screen. The panel displays all available fields for the selected object:
+
+- **Job details** include: Job ID, name, user, account, queue, state, exec host, node summary, requested nodes, walltime, runtime, time remaining, queued time, submitted/queue/eligible/estimated start/started/finished timestamps, location and comments, exit status, and raw `resources_requested` and `resources_used` dictionaries.
+- **Node details** include: name, state, NP, CPUs, properties, assigned jobs, available resources, assigned resources, and comment.
+- **Queue details** include: name, enabled, started, total jobs, per-state job counts, default resources, maximum resources, and comment.
+
+When there is more information than fits on screen, the panel becomes scrollable. Press `d` to toggle the panel on or off without losing your table selection. The border color of the panel matches the cluster grid cell color when a job or queue is selected from the grid.
+
+## Status bar
+
+The status bar at the bottom of the screen updates after every data fetch:
+
+- **Last updated** — timestamp of the most recent successful refresh, in local time.
+- **Source** — data source label: `pbs` for live scheduler data, or `sample` when bundled mock data is loaded.
+- **Errors** — if any PBS commands failed or returned partial data, the error messages are appended to the status bar in yellow. This lets you see immediately when data may be stale.
+
+## Sample data warning
+
+When `PBS_TUI_SAMPLE_DATA=1` is set, the dashboard loads a bundled mock cluster (~560 nodes, ~40 jobs) instead of querying a live scheduler. A warning banner is displayed at the top of the interface indicating that the data is synthetic. All dashboard features — filtering, sorting, the cluster grid, and the detail panel — work identically with sample data.
+
+## Job state labels
+
+The single-letter state codes reported by PBS Pro map to the following labels throughout the dashboard:
+
+| Code | Label | Description |
+|---|---|---|
+| `B` | Begun | Array job has begun execution |
+| `E` | Exiting | Job is exiting after having run |
+| `F` | Finished | Job is finished |
+| `H` | Held | Job is held and will not be scheduled |
+| `Q` | Queued | Job is queued, eligible to run |
+| `R` | Running | Job is currently running |
+| `S` | Suspended | Job has been suspended |
+| `T` | Transit | Job is in transit between queues or servers |
+| `W` | Waiting | Job is waiting for its execution time to be reached |

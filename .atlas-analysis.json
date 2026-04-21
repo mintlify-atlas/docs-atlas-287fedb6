@@ -1,0 +1,55 @@
+{
+  "projectType": "cli-tool",
+  "projectName": "PBS TUI",
+  "projectDescription": "A Textual-based terminal user interface for monitoring PBS Pro HPC schedulers, providing live views of jobs, nodes, and queues with a visual cluster utilization grid.",
+  "theme": "aspen",
+  "primaryColor": "#9c9c9c",
+  "lightColor": "#3d3c3c",
+  "darkColor": "#d2d1d1",
+  "navigation": {
+    "groups": [
+      {
+        "group": "Get Started",
+        "pages": ["introduction", "quickstart"]
+      },
+      {
+        "group": "Usage",
+        "pages": ["usage/dashboard", "usage/key-bindings", "usage/inline-mode"]
+      },
+      {
+        "group": "Configuration",
+        "pages": ["configuration/options", "configuration/themes", "configuration/environment"]
+      },
+      {
+        "group": "Reference",
+        "pages": ["reference/data-model", "reference/architecture"]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Live PBS Pro scheduler data via qstat/pbsnodes with JSON, XML, and text fallbacks",
+    "Interactive cluster utilization grid with click-to-inspect job details",
+    "Sortable data tables for jobs, nodes, and queues with inline filtering",
+    "Four built-in themes: pbs-dark, pbs-light, ansi-dark, ansi-light",
+    "Automatic 30-second refresh with manual refresh keybinding",
+    "Inline snapshot mode to print a Rich table or Markdown summary non-interactively",
+    "Bundled realistic mock cluster (~560 nodes, ~40 jobs) for demo without a live scheduler",
+    "Headless mode for CI/automated testing environments"
+  ],
+  "publicApiSurface": [
+    "pbs-tui (CLI entry point)",
+    "pbs-tui --inline [--file PATH]",
+    "pbs-tui --refresh-interval SECONDS",
+    "PBS_TUI_SAMPLE_DATA=1 (environment variable)",
+    "PBS_TUI_HEADLESS=1 (environment variable)",
+    "PBS_TUI_AUTOPILOT=quit (environment variable)",
+    "pbs_tui.app.PBSTUI (Textual App class)",
+    "pbs_tui.app.run() (programmatic entry point)",
+    "pbs_tui.fetcher.PBSDataFetcher (data fetcher class)",
+    "pbs_tui.data.Job (dataclass)",
+    "pbs_tui.data.Node (dataclass)",
+    "pbs_tui.data.Queue (dataclass)",
+    "pbs_tui.data.SchedulerSnapshot (dataclass)",
+    "pbs_tui.samples.sample_snapshot() (bundled demo data)"
+  ]
+}

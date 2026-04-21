@@ -1,0 +1,222 @@
+---
+title: "PBS TUI data model: Job, Node, Queue, SchedulerSnapshot"
+description: "Reference for the four core dataclasses in pbs_tui.data: Job, Node, Queue, and SchedulerSnapshot. Field types, defaults, and computed properties."
+---
+
+The `pbs_tui.data` module defines four dataclasses that represent the state of a PBS Pro scheduler at a point in time. `Job`, `Node`, and `Queue` each map to a single PBS entity and carry the fields returned by `qstat` and `pbsnodes`. A `SchedulerSnapshot` groups all three collections together with a timestamp and source identifier. These objects are produced by `PBSDataFetcher` and consumed by every widget in the dashboard.
+
+## Job
+
+A `Job` represents a single PBS Pro job. The four required fields — `id`, `name`, `user`, and `queue` — must always be present. All timing and resource fields are optional because not every PBS output format exposes them.
+
+<Expandable title="Job fields">
+  <ResponseField name="id" type="str" required>
+    The PBS job identifier (e.g., `6800042.aurora-pbs-0001`).
+  </ResponseField>
+  <ResponseField name="name" type="str" required>
+    The job name as submitted.
+  </ResponseField>
+  <ResponseField name="user" type="str" required>
+    The submitting user. Normalized by stripping the `@hostname` suffix when present.
+  </ResponseField>
+  <ResponseField name="queue" type="str" required>
+    The name of the queue the job belongs to.
+  </ResponseField>
+  <ResponseField name="state" type="str" required>
+    Single-letter PBS job state code. See [Job state codes](#job-state-codes) below.
+  </ResponseField>
+  <ResponseField name="exec_host" type="Optional[str]" default="None">
+    The execution host string as reported by PBS (e.g., `x3001-b00/0+x3001-b01/0`). `None` for non-running jobs.
+  </ResponseField>
+  <ResponseField name="account" type="Optional[str]" default="None">
+    The account or project charged for this job (maps to `Account_Name` in PBS output).
+  </ResponseField>
+  <ResponseField name="create_time" type="Optional[datetime]" default="None">
+    Timestamp when the job was created (`ctime` in PBS).
+  </ResponseField>
+  <ResponseField name="queue_time" type="Optional[datetime]" default="None">
+    Timestamp when the job entered the queue (`qtime` in PBS).
+  </ResponseField>
+  <ResponseField name="eligible_time" type="Optional[datetime]" default="None">
+    Timestamp when the job became eligible to run (`etime` in PBS).
+  </ResponseField>
+  <ResponseField name="start_time" type="Optional[datetime]" default="None">
+    Timestamp when execution began. Resolved from multiple PBS fields in priority order.
+  </ResponseField>
+  <ResponseField name="end_time" type="Optional[datetime]" default="None">
+    Timestamp when the job completed or was terminated (`comp_time` / `mtime`).
+  </ResponseField>
+  <ResponseField name="estimated_start_time" type="Optional[datetime]" default="None">
+    Scheduler's estimated start time (`estimated.start_time`). Set for queued jobs when the scheduler has projected a start window.
+  </ResponseField>
+  <ResponseField name="walltime" type="Optional[str]" default="None">
+    Requested walltime as an `HH:MM:SS` string.
+  </ResponseField>
+  <ResponseField name="nodes" type="Optional[str]" default="None">
+    Raw node selection string from `Resource_List.nodes` (e.g., `8:ppn=208`).
+  </ResponseField>
+  <ResponseField name="resources_requested" type="Dict[str, str]" default="{}">
+    Flat dictionary of all `Resource_List` attributes keyed by resource name.
+  </ResponseField>
+  <ResponseField name="resources_used" type="Dict[str, str]" default="{}">
+    Flat dictionary of all `resources_used` attributes reported by PBS (e.g., `walltime`, `cput`, `mem`).
+  </ResponseField>
+  <ResponseField name="comment" type="Optional[str]" default="None">
+    Scheduler or operator comment attached to the job.
+  </ResponseField>
+  <ResponseField name="location" type="Optional[str]" default="None">
+    Job location as reported by PBS (`job_location` / `Job_Location`).
+  </ResponseField>
+  <ResponseField name="exit_status" type="Optional[str]" default="None">
+    Exit status string for finished or exiting jobs.
+  </ResponseField>
+</Expandable>
+
+### `runtime(reference)` method
+
+```python
+job.runtime(reference: Optional[datetime] = None) -> Optional[timedelta]
+```
+
+Returns the elapsed runtime of the job. When `reference` is omitted the current UTC time is used. Returns `None` if `start_time` is not set, and clamps negative deltas to `timedelta(seconds=0)`. Timezone-naive and timezone-aware datetimes are normalized automatically before subtraction.
+
+---
+
+## Node
+
+A `Node` represents a single PBS compute node as reported by `pbsnodes`. Only `name` and `state` are required; all resource and assignment fields default to empty collections.
+
+<Expandable title="Node fields">
+  <ResponseField name="name" type="str" required>
+    The node hostname (e.g., `x3001-b00`).
+  </ResponseField>
+  <ResponseField name="state" type="str" required>
+    The raw PBS node state string. May contain comma-separated values such as `offline,down`.
+  </ResponseField>
+  <ResponseField name="np" type="Optional[int]" default="None">
+    Legacy processor count from the `np` PBS attribute.
+  </ResponseField>
+  <ResponseField name="ncpus" type="Optional[int]" default="None">
+    CPU count from `resources_available.ncpus` (preferred over `np`).
+  </ResponseField>
+  <ResponseField name="properties" type="List[str]" default="[]">
+    List of node property tags (e.g., `["xe", "slingshot"]`).
+  </ResponseField>
+  <ResponseField name="jobs" type="List[str]" default="[]">
+    List of job slot strings currently running on this node (e.g., `["0/6800042.aurora-pbs-0001"]`).
+  </ResponseField>
+  <ResponseField name="resources_available" type="Dict[str, str]" default="{}">
+    Flat dictionary of available resource attributes (e.g., `{"ncpus": "208", "ngpus": "12", "mem": "512gb"}`).
+  </ResponseField>
+  <ResponseField name="resources_assigned" type="Dict[str, str]" default="{}">
+    Flat dictionary of currently assigned resource attributes.
+  </ResponseField>
+  <ResponseField name="comment" type="Optional[str]" default="None">
+    Operator comment or diagnostic note attached to the node.
+  </ResponseField>
+</Expandable>
+
+### `primary_state()` method
+
+```python
+node.primary_state() -> str
+```
+
+Returns the first state token from a comma-separated `state` string. For example, `"offline,down"` returns `"offline"`. Returns `"unknown"` when `state` is empty.
+
+---
+
+## Queue
+
+A `Queue` represents a PBS job queue. Only `name` is required; all other fields default to `None` or empty collections and are populated from `qstat -Q` output.
+
+<Expandable title="Queue fields">
+  <ResponseField name="name" type="str" required>
+    The queue name.
+  </ResponseField>
+  <ResponseField name="state" type="Optional[str]" default="None">
+    Raw state string from PBS (e.g., `state_count` or `state`).
+  </ResponseField>
+  <ResponseField name="enabled" type="Optional[bool]" default="None">
+    Whether the queue accepts new job submissions.
+  </ResponseField>
+  <ResponseField name="started" type="Optional[bool]" default="None">
+    Whether the queue is currently executing jobs.
+  </ResponseField>
+  <ResponseField name="total_jobs" type="Optional[int]" default="None">
+    Total number of jobs currently associated with this queue. Derived by summing `job_states` when not directly reported by PBS.
+  </ResponseField>
+  <ResponseField name="job_states" type="Dict[str, int]" default="{}">
+    Mapping of single-letter state codes to job counts (e.g., `{"R": 5, "Q": 12, "H": 1}`).
+  </ResponseField>
+  <ResponseField name="resources_default" type="Dict[str, str]" default="{}">
+    Default resource limits applied to jobs submitted to this queue.
+  </ResponseField>
+  <ResponseField name="resources_max" type="Dict[str, str]" default="{}">
+    Maximum resource limits enforced for jobs in this queue.
+  </ResponseField>
+  <ResponseField name="comment" type="Optional[str]" default="None">
+    Operator comment or description for this queue.
+  </ResponseField>
+</Expandable>
+
+---
+
+## SchedulerSnapshot
+
+A `SchedulerSnapshot` is a point-in-time capture of the full PBS scheduler state. It groups `Job`, `Node`, and `Queue` lists together with metadata about when and how the data was collected.
+
+<Expandable title="SchedulerSnapshot fields">
+  <ResponseField name="jobs" type="List[Job]" default="[]">
+    All jobs returned by `qstat` at snapshot time.
+  </ResponseField>
+  <ResponseField name="nodes" type="List[Node]" default="[]">
+    All nodes returned by `pbsnodes` at snapshot time.
+  </ResponseField>
+  <ResponseField name="queues" type="List[Queue]" default="[]">
+    All queues returned by `qstat -Q` at snapshot time.
+  </ResponseField>
+  <ResponseField name="timestamp" type="datetime" default="datetime.now(timezone.utc)">
+    UTC timestamp when the snapshot was collected.
+  </ResponseField>
+  <ResponseField name="source" type="str" default='"pbs"'>
+    Identifies the data origin. Set to `"pbs"` for live data and `"sample"` when bundled mock data is used.
+  </ResponseField>
+  <ResponseField name="errors" type="List[str]" default="[]">
+    Non-fatal error messages accumulated during data collection (e.g., parser warnings, command timeouts). Surfaced in the status bar.
+  </ResponseField>
+</Expandable>
+
+---
+
+## Job state codes
+
+PBS Pro uses single-letter codes to represent job states. The dashboard displays the full label in the jobs table and the detail panel.
+
+| Code | Label | Description |
+|------|-------|-------------|
+| `B` | Begun | Array job has begun execution |
+| `E` | Exiting | Job is exiting after finishing or being terminated |
+| `F` | Finished | Job has completed |
+| `H` | Held | Job is held and will not be scheduled |
+| `Q` | Queued | Job is queued and awaiting resources |
+| `R` | Running | Job is currently executing |
+| `S` | Suspended | Job has been suspended by the scheduler or operator |
+| `T` | Transit | Job is in transit between queues or servers |
+| `W` | Waiting | Job is waiting for a start time or condition |
+
+---
+
+## Sample data
+
+`pbs_tui.samples.sample_snapshot()` returns a `SchedulerSnapshot` populated with realistic mock data modeled after an Aurora-style supercomputer cluster. It includes approximately 561 nodes spread across three rack groups, around 40 jobs in mixed states (Running, Queued, Held), and 10 queues with varied configurations.
+
+The snapshot is used automatically when `PBS_TUI_SAMPLE_DATA=1` is set in the environment, or when all PBS command invocations fail and `fallback_to_sample=True` (the default) is configured on `PBSDataFetcher`. The `source` field is set to `"sample"` and a notice is appended to `errors` so the status bar makes the synthetic origin clear.
+
+```bash
+PBS_TUI_SAMPLE_DATA=1 pbs-tui
+```
+
+<Tip>
+  Sample mode is useful for exploring the dashboard UI, testing themes, and developing against the data model without a live PBS cluster.
+</Tip>

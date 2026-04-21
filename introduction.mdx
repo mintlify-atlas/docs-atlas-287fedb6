@@ -1,0 +1,46 @@
+---
+title: "PBS TUI: Live PBS Pro scheduler monitoring"
+description: "PBS TUI is a Textual terminal dashboard for PBS Pro HPC schedulers. Monitor jobs, nodes, and queues in real time from your terminal."
+---
+
+PBS TUI is a terminal user interface built with [Textual](https://textual.textualize.io/) for monitoring [PBS Pro](https://altair.com/pbs-professional) schedulers. Designed for HPC operators — including those running facilities like the [Argonne Leadership Computing Facility (ALCF)](https://alcf.anl.gov) — it surfaces job, node, and queue activity in a single live-updating dashboard so you can track workload health without leaving the terminal.
+
+## Key features
+
+<CardGroup cols={2}>
+  <Card title="Live PBS data" icon="arrow-rotate-right">
+    Queries `qstat` and `pbsnodes` every 30 seconds, preferring JSON output (`-F json`) with automatic XML and plain-text fallbacks for schedulers that do not support newer flags.
+  </Card>
+  <Card title="Cluster utilization grid" icon="grid-2">
+    Visual map of node utilization across the whole cluster with a proportional legend bar. Click any job block to inspect its details in the side panel.
+  </Card>
+  <Card title="Rich sortable tables" icon="table-list">
+    Sortable, filterable tables for jobs, nodes, and queues — each with an inline detail pane for the selected row.
+  </Card>
+  <Card title="Four built-in themes" icon="palette">
+    Ships with `pbs-dark`, `pbs-light`, `ansi-dark`, and `ansi-light` themes. The `ansi-*` variants use muted 256-color tones that blend with your terminal's own colorscheme. Switch via the command palette (`Ctrl+P`).
+  </Card>
+  <Card title="Automatic refresh + manual binding" icon="clock">
+    Data refreshes automatically every 30 seconds. Press `r` at any time to trigger an immediate update without waiting for the next cycle.
+  </Card>
+  <Card title="Inline snapshot mode" icon="table">
+    Run `pbs-tui --inline` to print a Rich-rendered job table to stdout without starting the interactive TUI. Pair with `--file snapshot.md` to also write an aligned Markdown table.
+  </Card>
+  <Card title="Sample data mode" icon="flask">
+    Set `PBS_TUI_SAMPLE_DATA=1` to load a bundled mock cluster (~560 nodes, ~40 jobs) and explore the full UI without a live PBS scheduler.
+  </Card>
+  <Card title="Headless mode for CI" icon="terminal">
+    Set `PBS_TUI_HEADLESS=1` to run without an interactive terminal. Pair with `PBS_TUI_AUTOPILOT=quit` to exit automatically after the first render — useful for automated testing and CI pipelines.
+  </Card>
+</CardGroup>
+
+## Requirements
+
+- **Python 3.10 or later**
+- **PBS Pro CLI tools** — `qstat` and `pbsnodes` must be available on your `PATH` when connecting to a live cluster
+
+<Note>
+  No PBS cluster available? Set `PBS_TUI_SAMPLE_DATA=1` before launching to load the bundled mock cluster and explore the full UI without any scheduler connection. See [Get started with PBS TUI](/quickstart) for details.
+</Note>
+
+Ready to install? Head to the [quickstart](/quickstart) to have PBS TUI running in under two minutes.

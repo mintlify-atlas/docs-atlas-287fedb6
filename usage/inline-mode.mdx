@@ -1,0 +1,75 @@
+---
+title: "Inline snapshot mode for non-interactive output"
+description: "Use pbs-tui --inline to print a Rich-formatted jobs table to stdout. Optionally write a Markdown snapshot with --file for sharing or logging."
+---
+
+Inline mode lets you capture a snapshot of the current PBS job queue and print it to your terminal — or save it as a Markdown file — without launching the interactive TUI. It is useful for one-off checks, log collection, sharing job status in chat, and generating scheduled snapshots in scripts.
+
+## Basic usage
+
+Pass `--inline` to fetch the current scheduler state once and print a Rich-formatted table to stdout:
+
+```bash
+PBS_TUI_SAMPLE_DATA=1 pbs-tui --inline
+```
+
+The output is a Unicode box-drawing table titled **PBS Jobs as of \<timestamp\>** with a source attribution caption. It renders with color and formatting when stdout is a terminal, and falls back to plain text otherwise. The columns match those in the interactive Jobs tab.
+
+## Writing a Markdown file
+
+Add `--file <path>` alongside `--inline` to also write an aligned Markdown table to a file:
+
+```bash
+pbs-tui --inline --file snapshot.md
+```
+
+The file receives:
+
+- A heading: `### PBS Jobs as of <timestamp>` with a local-time timestamp.
+- A source line: `*Source*: <source>` identifying where the data came from (e.g. `qstat-json`, `sample`).
+- An aligned Markdown table with the same columns as the inline Rich output.
+- Any scheduler errors are appended as blockquotes at the end of the file.
+
+The Rich table is still printed to stdout — `--file` adds the Markdown output on top of the normal inline behavior. Any warnings raised during data collection are written to **stderr** so they remain visible in log streams without polluting the table output.
+
+<Note>
+  `--file` requires `--inline`. Running `pbs-tui --file snapshot.md` without `--inline` is an error and the application will exit with a usage message.
+</Note>
+
+## Sample output columns
+
+The inline table uses the same column order as the interactive Jobs tab:
+
+`#JobId` · `User` · `Account` · `Queue` · `Nodes` · `State` · `WallTime` · `RunTime` · `TimeRemaining` · `QueuedTime` · `EstStart` · `JobName`
+
+Missing values are shown as `-`. Job names longer than 20 characters are truncated with a `…` suffix, consistent with the interactive view.
+
+## Headless mode
+
+For CI environments and automated pipelines without an interactive terminal, set `PBS_TUI_HEADLESS=1` to run the full TUI in headless mode. Pair it with `PBS_TUI_AUTOPILOT=quit` to have the application press `q` automatically after its first data render — so `pbs-tui` exits cleanly once the interface has completed its first update:
+
+```bash
+PBS_TUI_HEADLESS=1 PBS_TUI_AUTOPILOT=quit pbs-tui
+```
+
+This is useful for smoke-testing the full application startup path in CI without requiring a terminal emulator.
+
+<CodeGroup>
+
+```bash Basic inline
+PBS_TUI_SAMPLE_DATA=1 pbs-tui --inline
+```
+
+```bash Save Markdown snapshot
+pbs-tui --inline --file snapshot.md
+```
+
+```bash CI headless run
+PBS_TUI_HEADLESS=1 PBS_TUI_AUTOPILOT=quit pbs-tui
+```
+
+</CodeGroup>
+
+<Tip>
+  On large clusters the inline output can be hundreds of lines. Pipe to a pager to scroll through it comfortably: `pbs-tui --inline | less -R`
+</Tip>

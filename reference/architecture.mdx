@@ -1,0 +1,106 @@
+---
+title: "PBS TUI architecture and module overview"
+description: "How PBS TUI modules fit together: PBSDataFetcher fetches scheduler data, PBSTUI renders the dashboard, and ClusterGridWidget visualizes cluster utilization."
+---
+
+PBS TUI is organized as a thin pipeline: `PBSDataFetcher` collects and parses raw PBS command output into structured dataclasses, a `SchedulerSnapshot` carries that data to the Textual application, and `PBSTUI` distributes it across the widgets that render the dashboard. The cluster grid, job tables, node tables, and queue tables all read from the same snapshot object, so a single refresh cycle keeps every view consistent.
+
+## Module overview
+
+<CardGroup cols={2}>
+  <Card title="pbs_tui.app" icon="display" href="/reference/architecture">
+    The `PBSTUI` Textual application class. Composes and manages `JobsTable`, `NodesTable`, `QueuesTable`, `ClusterGridWidget`, `DetailPanel`, `SummaryWidget`, and `StatusBar`. The `run()` function is the console-script entry point and handles CLI argument parsing.
+  </Card>
+  <Card title="pbs_tui.fetcher" icon="arrow-down-to-line" href="/reference/architecture">
+    `PBSDataFetcher` orchestrates asynchronous `qstat` and `pbsnodes` invocations with a three-tier JSON → XML → plain-text fallback chain. Produces a `SchedulerSnapshot` from live or sample data.
+  </Card>
+  <Card title="pbs_tui.data" icon="database" href="/reference/data-model">
+    Core dataclasses: `Job`, `Node`, `Queue`, and `SchedulerSnapshot`. These are the only data structures passed between modules. See [Data model](/reference/data-model) for full field reference.
+  </Card>
+  <Card title="pbs_tui.cluster_grid" icon="grid-2" href="/reference/architecture">
+    `ClusterGridWidget` and the `_build_grid()` function that maps nodes proportionally to a character grid. Also contains the color palette generation logic that derives job colors from Textual CSS theme variables.
+  </Card>
+  <Card title="pbs_tui.samples" icon="flask" href="/reference/data-model">
+    `sample_snapshot()` returns a bundled `SchedulerSnapshot` with ~561 nodes, ~40 jobs, and 10 queues modeled after an Aurora-style cluster. Used for demo mode and as the last-resort fallback.
+  </Card>
+  <Card title="pbs_tui.nodes" icon="server" href="/reference/architecture">
+    Helper functions for summarizing node and job relationships (e.g., `job_node_summary()` extracts a node count and first-node name from a `Job`'s `exec_host` field).
+  </Card>
+  <Card title="pbs_tui.time_utils" icon="clock" href="/reference/architecture">
+    Duration parsing and formatting utilities. `parse_duration_spec()` converts `HH:MM:SS` walltime strings to `timedelta`; `time_remaining()` and `format_remaining()` power the cluster grid legend.
+  </Card>
+  <Card title="pbs_tui.ui_config" icon="sliders" href="/reference/architecture">
+    `JOB_TABLE_COLUMNS`: an ordered list of `(label, justify)` tuples that defines the columns rendered in the jobs table and the inline snapshot output. Changing this list adjusts both views simultaneously.
+  </Card>
+</CardGroup>
+
+---
+
+## Data flow
+
+<Steps>
+  <Step title="PBSDataFetcher.fetch_snapshot() runs">
+    On startup and every `refresh_interval` seconds (default 30), `PBSTUI` calls `PBSDataFetcher.fetch_snapshot()`. The fetcher launches `qstat` and `pbsnodes` as async subprocesses concurrently, each with a configurable timeout (default 15 s).
+  </Step>
+  <Step title="Output is parsed into dataclasses">
+    Each command's stdout is passed through the fallback chain — JSON first, then XML, then plain text. Successful output is parsed into lists of `Job`, `Node`, and `Queue` objects. Errors from failed attempts are accumulated but do not abort the fetch.
+  </Step>
+  <Step title="A SchedulerSnapshot is assembled and returned">
+    The fetcher combines the three lists, the current UTC timestamp, and any accumulated error messages into a `SchedulerSnapshot`. If all PBS commands fail and `fallback_to_sample` is `True`, the bundled sample snapshot is returned instead.
+  </Step>
+  <Step title="PBSTUI calls _update_tables()">
+    The application stores the snapshot on `self._snapshot` and calls `_update_tables()`. This method dispatches the new data to `NodesTable`, `QueuesTable`, and `ClusterGridWidget`, rebuilds the job lookup index, and updates the `SummaryWidget` header line.
+  </Step>
+  <Step title="ClusterGridWidget re-renders the utilization grid">
+    `ClusterGridWidget.update_from_snapshot()` stores the snapshot and triggers `_rebuild()`. The widget reads its current pixel dimensions, queries the active Textual theme CSS variables, and calls `_build_grid()` to produce a new `GridData` object. The header, grid, and legend panels are updated atomically.
+  </Step>
+  <Step title="DetailPanel updates for the selected item">
+    After every table refresh, `_update_detail_panel()` checks which job, node, or queue is currently selected and re-renders the detail panel with up-to-date field values from the new snapshot. The panel is hidden if the selected item no longer exists in the new data.
+  </Step>
+</Steps>
+
+---
+
+## PBSDataFetcher fallback chain
+
+`PBSDataFetcher` attempts three output formats for each data type before giving up. This lets PBS TUI work with older PBS Pro installations that do not support JSON output.
+
+| Tier | Jobs command | Nodes command | Format |
+|------|-------------|--------------|--------|
+| 1 — preferred | `qstat -f -F json` | `pbsnodes -a -F json` | JSON |
+| 2 — fallback | `qstat -f -x` | `pbsnodes -x` | XML |
+| 3 — last resort | `qstat -f` | `pbsnodes -a` | Plain text |
+
+Each tier is tried in order. If a command exits with a non-zero status, times out, or produces output that fails to parse, its error is recorded and the next tier is attempted. Queue data follows the same pattern using `qstat -Q -f`.
+
+<Note>
+  When every tier fails **and** `fallback_to_sample` is `True` (the default), the bundled sample data is returned. Set `fallback_to_sample=False` on `PBSDataFetcher` to disable this behavior and surface an empty dashboard instead.
+</Note>
+
+If the environment variable `PBS_TUI_SAMPLE_DATA=1` is set, the fetcher skips all PBS commands entirely and returns the sample snapshot immediately.
+
+---
+
+## ClusterGrid rendering
+
+The cluster grid provides a visual map of node utilization across the whole cluster. It is rendered as a monospace character grid where each cell represents a proportional slice of the total node count.
+
+**Grid layout:** The `_build_grid()` function calculates a `nodes_per_cell` ratio (`total_nodes / (width × height)`). Running jobs are sorted by node count (largest first) and assigned contiguous cells proportional to their node count via `ceil(node_count / nodes_per_cell)`.
+
+**Job blocks vs. aggregated queues:** Jobs in named queues (e.g., `large`, `capacity`, `backfill-large`) each receive their own solid-fill block (`" "`). Jobs in aggregated queues (`debug`, `debug-scaling`, `preemptable`, `demand`, `tiny`, `small`, `medium`) are merged into a single textured block (`░`) per queue. Unoccupied cells use a lighter textured fill (`▒`).
+
+**Color palette:** Colors are derived from the active Textual theme's CSS variables at render time. The seven theme seed keys (`primary`, `secondary`, `accent`, `warning`, `error`, `success`, `boost`) are resolved via `app.get_css_variables()`. For ANSI themes (`ansi-dark`, `ansi-light`), 14 named ANSI terminal colors are used instead of hex values. For all other themes, unique hex colors are generated by hue-shifting the seed colors to match the number of running jobs.
+
+**Click events:** Clicking a grid cell posts a `ClusterGridWidget.CellClicked` message containing the `owner` (job ID or `queue:<name>`) and the cell's `color_style` string. `PBSTUI` handles this message and shows the corresponding job or queue in the detail panel, applying a matching border color.
+
+**Legend bar:** Below the grid a proportional bar divides the full cluster width among all running job blocks, aggregated queue blocks, and available nodes. Labels appear inline when a segment is wide enough; narrow segments fall back to a footnote list.
+
+---
+
+## CSS customization
+
+Widget layout and default colors are defined in `pbs_tui/app.tcss`. Adjusting this file lets you change panel proportions, padding, border styles, and any property that Textual's CSS engine supports. Custom themes registered via `PBSTUI.register_theme()` automatically propagate new seed colors to the cluster grid palette on the next refresh.
+
+<Tip>
+  Switch themes at runtime without restarting using the command palette (`Ctrl+P` → **Change theme**). The cluster grid rebuilds its color palette immediately on the next snapshot update.
+</Tip>

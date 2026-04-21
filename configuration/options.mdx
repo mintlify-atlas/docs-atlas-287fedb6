@@ -1,0 +1,81 @@
+---
+title: "PBS TUI command-line options and flags"
+description: "Reference for all pbs-tui CLI flags. Covers --inline, --file, and --refresh-interval with default values, types, and usage examples."
+---
+
+PBS TUI exposes three command-line flags that control how it starts and how frequently it polls the scheduler. All flags are optional — running `pbs-tui` with no arguments launches the interactive dashboard with a 30-second refresh cycle.
+
+## CLI flags
+
+<ParamField query="--inline" type="boolean" default="false">
+  Fetch PBS data once and print a Rich table to standard output instead of starting the interactive TUI. Errors from PBS commands are written to standard error so they remain visible in logs.
+</ParamField>
+
+<ParamField query="--file" type="string">
+  Write a Markdown snapshot of the current job table to the specified path alongside the inline Rich table output. Requires `--inline` — passing `--file` without `--inline` is an error.
+</ParamField>
+
+<ParamField query="--refresh-interval" type="float" default="30.0">
+  How often the TUI polls PBS data, in seconds. Accepts fractional values (for example `0.5`). Has no effect when `--inline` is used.
+</ParamField>
+
+## Examples
+
+<CodeGroup>
+
+```bash Default launch
+pbs-tui
+```
+
+```bash Custom refresh rate
+pbs-tui --refresh-interval 60
+```
+
+```bash Inline table
+pbs-tui --inline
+```
+
+```bash Inline with Markdown file
+pbs-tui --inline --file snapshot.md
+```
+
+</CodeGroup>
+
+## Programmatic use
+
+You can drive PBS TUI directly from Python by importing from the top-level `pbs_tui` package or from `pbs_tui.app`.
+
+```python Programmatic use
+from pbs_tui import PBSTUI, run, snapshot_to_markdown
+from pbs_tui.fetcher import PBSDataFetcher
+import asyncio
+
+# Launch the interactive TUI with default settings
+run()
+
+# Customize refresh interval
+app = PBSTUI(refresh_interval=60.0)
+app.run()
+
+# Use a custom fetcher
+fetcher = PBSDataFetcher(command_timeout=30.0, fallback_to_sample=False)
+app = PBSTUI(fetcher=fetcher)
+app.run()
+
+# Fetch a snapshot and render it as a Markdown string (no TUI)
+fetcher = PBSDataFetcher()
+snapshot = asyncio.run(fetcher.fetch_snapshot())
+markdown_text = snapshot_to_markdown(snapshot)
+print(markdown_text)
+```
+
+`PBSTUI` accepts two keyword arguments:
+
+- `refresh_interval` (`float`, default `30.0`) — seconds between automatic data refreshes.
+- `fetcher` (`PBSDataFetcher`, optional) — a pre-configured fetcher instance. When omitted, a default `PBSDataFetcher` is created automatically.
+
+**`snapshot_to_markdown(snapshot)`** — converts a `SchedulerSnapshot` to a Markdown string containing a timestamped heading, source attribution, and an aligned job table. This is the same output written by `pbs-tui --inline --file <path>`. Also exported from the top-level `pbs_tui` package.
+
+<Tip>
+  The `run()` helper is the same function called by the `pbs-tui` console script. Pass `argv` to simulate CLI arguments in tests: `run(argv=["--refresh-interval", "10"])`.
+</Tip>

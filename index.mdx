@@ -1,97 +1,66 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: "PBS TUI: Terminal dashboard for PBS Pro schedulers"
+description: "Monitor PBS Pro HPC scheduler jobs, nodes, and queues in real time from your terminal. Built with Textual for Argonne Leadership Computing Facility."
 ---
 
-## Setting up
+PBS TUI is a terminal user interface built with [Textual](https://textual.textualize.io/) for monitoring [PBS Pro](https://altair.com/pbs-professional) schedulers. It surfaces job, queue, and node activity in a single live-updating dashboard — giving operators a real-time view of workload health without leaving the terminal.
 
-Get your documentation site up and running in minutes.
-
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
->
-  Follow our three step quickstart guide.
-</Card>
-
-## Make it yours
-
-Design a docs site that looks great and empowers your users.
-
-<Columns cols={2}>
-  <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
-  >
-    Edit your docs locally and preview them in real time.
+<CardGroup cols={2}>
+  <Card title="Introduction" icon="circle-info" href="/introduction">
+    Learn what PBS TUI does, who it's for, and how it connects to your PBS Pro cluster.
   </Card>
-  <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
-  >
-    Customize the design and colors of your site to match your brand.
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Install PBS TUI and launch the dashboard in under two minutes.
   </Card>
-    <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
+  <Card title="Dashboard usage" icon="gauge" href="/usage/dashboard">
+    Explore the jobs, nodes, queues, and cluster grid views.
   </Card>
-  <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
-  >
-    Auto-generate API documentation from OpenAPI specifications.
+  <Card title="Key bindings" icon="keyboard" href="/usage/key-bindings">
+    Navigate the TUI faster with the full keyboard shortcut reference.
   </Card>
-</Columns>
+  <Card title="Inline snapshot mode" icon="table" href="/usage/inline-mode">
+    Print a Rich table or Markdown summary without starting the interactive TUI.
+  </Card>
+  <Card title="Configuration" icon="sliders" href="/configuration/options">
+    Adjust refresh intervals, themes, and data sources.
+  </Card>
+</CardGroup>
 
-## Create beautiful pages
+## What you get
 
-Everything you need to create world-class documentation.
+<CardGroup cols={2}>
+  <Card title="Live PBS data" icon="arrow-rotate-right">
+    Queries `qstat` and `pbsnodes` every 30 seconds, preferring JSON output with automatic XML and text fallbacks.
+  </Card>
+  <Card title="Cluster utilization grid" icon="grid-2">
+    Visual map of node utilization across the whole cluster. Click any job block to inspect its details.
+  </Card>
+  <Card title="Rich data tables" icon="table-list">
+    Sortable, filterable tables for jobs, nodes, and queues — each with a detail pane for the selected row.
+  </Card>
+  <Card title="Multiple themes" icon="palette">
+    Ships with `pbs-dark`, `pbs-light`, `ansi-dark`, and `ansi-light` themes. Switch via the command palette.
+  </Card>
+  <Card title="Sample data mode" icon="flask">
+    Bundled mock cluster (~560 nodes, ~40 jobs) lets you explore the UI without a live PBS scheduler.
+  </Card>
+  <Card title="Inline & headless modes" icon="terminal">
+    Print snapshots non-interactively or run headless in CI — no interactive terminal required.
+  </Card>
+</CardGroup>
 
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
-  </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
-  </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
-  </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
-  </Card>
-</Columns>
+## Quick install
 
-## Need inspiration?
+```bash
+uv pip install pbs-tui
+```
 
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+Then launch the dashboard once `qstat` and `pbsnodes` are on your `PATH`:
+
+```bash
+pbs-tui
+```
+
+<Tip>
+  No PBS cluster? Try PBS TUI immediately with bundled sample data: `PBS_TUI_SAMPLE_DATA=1 pbs-tui`
+</Tip>

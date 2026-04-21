@@ -1,0 +1,75 @@
+---
+title: "Environment variables for PBS TUI"
+description: "Configure PBS TUI behavior with environment variables. Control sample data, headless mode, autopilot, and PBS command paths without CLI flags."
+---
+
+PBS TUI reads a set of environment variables at startup to control behavior that is not exposed as CLI flags. These are particularly useful for CI pipelines, automated testing, and demo environments where you need to adjust behavior without modifying launch scripts.
+
+## Environment variables
+
+<ParamField query="PBS_TUI_SAMPLE_DATA" type="string">
+  When set to a truthy value (`1`, `true`, or `yes`), PBS TUI loads bundled mock cluster data instead of running `qstat` and `pbsnodes`. The mock dataset contains approximately 560 nodes and 40 jobs drawn from a realistic HPC workload. A warning banner appears at the top of the interface indicating that the data is synthetic.
+
+  Set to `0`, `false`, or `no` to explicitly disable sample mode (the default).
+
+  This variable is also read by `PBSDataFetcher` at construction time. Passing `force_sample=True` to the constructor has the same effect.
+</ParamField>
+
+<ParamField query="PBS_TUI_HEADLESS" type="string">
+  When set to a truthy value, runs the TUI in headless mode — no interactive terminal is required. Useful for CI/CD environments or automated smoke tests where a PTY is not available.
+</ParamField>
+
+<ParamField query="PBS_TUI_AUTOPILOT" type="string">
+  When set to `quit` or `exit`, PBS TUI automatically presses the `q` binding after startup so the application exits cleanly once it has rendered its first update. Combine with `PBS_TUI_HEADLESS=1` for fully automated runs that verify the application starts without errors.
+
+  Any other value is ignored.
+</ParamField>
+
+## PBSDataFetcher constructor options
+
+When using PBS TUI programmatically, `PBSDataFetcher` accepts several constructor parameters that give you fine-grained control over how scheduler data is collected. These options have no corresponding environment variables but cover common deployment needs.
+
+```python Custom fetcher
+from pbs_tui.fetcher import PBSDataFetcher
+
+fetcher = PBSDataFetcher(
+    qstat_path="/opt/pbs/bin/qstat",
+    pbsnodes_path="/opt/pbs/bin/pbsnodes",
+    include_nodes=True,
+    include_queues=True,
+    command_timeout=30.0,
+    fallback_to_sample=False,
+)
+```
+
+| Parameter           | Type    | Default      | Description                                                                                                     |
+| ------------------- | ------- | ------------ | --------------------------------------------------------------------------------------------------------------- |
+| `qstat_path`        | `str`   | `"qstat"`    | Path to the `qstat` executable. Useful when PBS binaries are not on `PATH`.                                     |
+| `pbsnodes_path`     | `str`   | `"pbsnodes"` | Path to the `pbsnodes` executable.                                                                              |
+| `include_nodes`     | `bool`  | `True`       | When `False`, skip the `pbsnodes` call entirely. The cluster grid and nodes table will be empty.                |
+| `include_queues`    | `bool`  | `True`       | When `False`, skip the `qstat -Q` call entirely. The queues table will be empty.                               |
+| `command_timeout`   | `float` | `15.0`       | Seconds before a `qstat` or `pbsnodes` subprocess is killed and treated as a failure.                           |
+| `fallback_to_sample`| `bool`  | `True`       | When `True`, load bundled sample data if both `qstat` and `pbsnodes` return no results. Set to `False` to show an empty dashboard with an error message instead. |
+| `force_sample`      | `bool`  | `None`       | Override the `PBS_TUI_SAMPLE_DATA` environment variable. `True` always uses sample data; `False` always uses live commands; `None` defers to the environment variable. |
+
+## Examples
+
+<CodeGroup>
+
+```bash Demo mode
+PBS_TUI_SAMPLE_DATA=1 pbs-tui
+```
+
+```bash CI smoke test
+PBS_TUI_HEADLESS=1 PBS_TUI_AUTOPILOT=quit pbs-tui
+```
+
+```bash Inline demo
+PBS_TUI_SAMPLE_DATA=1 pbs-tui --inline
+```
+
+</CodeGroup>
+
+<Tip>
+  Combining `PBS_TUI_HEADLESS=1` with `PBS_TUI_AUTOPILOT=quit` and `PBS_TUI_SAMPLE_DATA=1` lets you verify the full application startup path in CI without a PBS cluster or an interactive terminal.
+</Tip>

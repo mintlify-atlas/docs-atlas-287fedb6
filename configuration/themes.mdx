@@ -1,0 +1,95 @@
+---
+title: "Themes and visual customization in PBS TUI"
+description: "Switch between pbs-dark, pbs-light, ansi-dark, and ansi-light themes in PBS TUI. Use the command palette or customize colors in app.tcss."
+---
+
+PBS TUI ships with four built-in themes. The `pbs-*` themes use a purpose-built color palette optimized for HPC dashboards, while the `ansi-*` themes use muted 256-color palette tones that blend with your terminal's own colorscheme. You can switch themes at any time without restarting the application.
+
+## Built-in themes
+
+<Tabs>
+  <Tab title="pbs-dark">
+    A high-contrast dark theme designed for dark terminal environments.
+
+    | Role       | Color     |
+    | ---------- | --------- |
+    | Background | `#0B1220` |
+    | Surface    | `#141B2D` |
+    | Primary    | `#4DB2FF` |
+    | Secondary  | `#89DDFF` |
+    | Foreground | `#E6EEF8` |
+    | Warning    | `#F9E2AF` |
+    | Error      | `#F38BA8` |
+    | Success    | `#94E2D5` |
+
+    This is the default theme. It starts automatically on launch unless a different theme was previously selected via the command palette.
+  </Tab>
+  <Tab title="pbs-light">
+    A light theme suited for bright terminal environments or presentations.
+
+    | Role       | Color     |
+    | ---------- | --------- |
+    | Background | `#F3F7FD` |
+    | Surface    | `#FFFFFF` |
+    | Primary    | `#1F5BA5` |
+    | Secondary  | `#0284C7` |
+    | Foreground | `#172033` |
+    | Warning    | `#D97706` |
+    | Error      | `#B91C1C` |
+    | Success    | `#15803D` |
+  </Tab>
+  <Tab title="ansi-dark">
+    A dark theme using fixed hex colors chosen to resemble a standard ANSI terminal palette. Colors are muted to blend with terminal colorschemes that use a similar range.
+
+    | Role       | Color     | ANSI reference      |
+    | ---------- | --------- | ------------------- |
+    | Background | `#1C1C1C` | ANSI 234 — near-black |
+    | Surface    | `#262626` | ANSI 235 — dark gray  |
+    | Primary    | `#5F87AF` | ANSI 67  — muted blue |
+    | Secondary  | `#5FAFAF` | ANSI 73  — teal       |
+    | Foreground | `#C0C0C0` | ANSI 7   — silver     |
+    | Warning    | `#D7AF5F` | ANSI 179 — amber      |
+    | Error      | `#AF5F5F` | ANSI 131 — muted red  |
+    | Success    | `#5FAF5F` | ANSI 71  — green      |
+
+    <Note>
+      Unlike the `pbs-*` themes, `ansi-dark` does **not** inherit your terminal's configured `color0`–`color15` values. The hex colors are fixed but chosen to approximate a typical ANSI 256-color palette.
+    </Note>
+  </Tab>
+  <Tab title="ansi-light">
+    A light theme using fixed hex colors from the ANSI 256-color range, suitable for terminals set to a light colorscheme.
+
+    | Role       | Color     | ANSI reference        |
+    | ---------- | --------- | --------------------- |
+    | Background | `#EEEEEE` | ANSI 255 — near-white |
+    | Surface    | `#FFFFFF` | white                 |
+    | Primary    | `#005FAF` | ANSI 25  — dark blue  |
+    | Secondary  | `#008787` | ANSI 30  — dark teal  |
+    | Foreground | `#303030` | ANSI 236 — dark gray  |
+    | Warning    | `#AF8700` | ANSI 136 — dark amber |
+    | Error      | `#AF0000` | ANSI 124 — dark red   |
+    | Success    | `#008700` | ANSI 28  — dark green |
+  </Tab>
+</Tabs>
+
+## How to switch themes
+
+**Via the command palette:**
+
+1. Press `Ctrl+P` to open the command palette.
+2. Type `Change theme` to filter the action list.
+3. Select the theme you want from the results.
+
+The change takes effect immediately without restarting the application. Your selection persists for the current session.
+
+<Tip>
+  The `ansi-*` themes use muted colors that are intentionally close to common terminal default palettes. If the colors in `pbs-dark` or `pbs-light` feel too saturated for your terminal setup, switching to `ansi-dark` or `ansi-light` produces a softer appearance.
+</Tip>
+
+## CSS customization
+
+All layout rules and theme-specific attributes are defined in `pbs_tui/app.tcss`. If you need colors or spacing that none of the built-in themes provide, fork the project and edit that file directly. The Textual documentation covers the full CSS property set available to Textual applications.
+
+<Note>
+  Theme support requires Textual 0.47 or later, which introduced the `Theme` helper class used to register `pbs-dark`, `pbs-light`, `ansi-dark`, and `ansi-light`. Older Textual versions fall back to Textual's built-in default themes and the four PBS TUI themes will not appear in the command palette.
+</Note>

@@ -1,0 +1,57 @@
+---
+title: "PBS TUI keyboard shortcuts and navigation"
+description: "Complete keyboard reference for PBS TUI. Global bindings, table navigation, job filtering, and command palette access explained with context."
+---
+
+PBS TUI is designed to be driven entirely from the keyboard. Once the dashboard is running, you can switch tabs, trigger a refresh, toggle the detail panel, and filter jobs without reaching for the mouse. This page covers every binding available, how table navigation works, how the job filter input processes your queries, and what the command palette offers.
+
+## Global bindings
+
+These key bindings work from any tab, at any time, as long as a text input does not have focus.
+
+| Key | Action |
+|---|---|
+| `q` | Quit the application |
+| `r` | Refresh scheduler data immediately, without waiting for the next automatic interval |
+| `g` | Switch to the Cluster tab and focus it |
+| `j` | Switch to the Jobs tab and focus the jobs table |
+| `n` | Switch to the Nodes tab and focus the nodes table |
+| `u` | Switch to the Queues tab and focus the queues table |
+| `d` | Toggle the detail panel — hides or shows the right-side panel without clearing the current selection |
+| `Ctrl+P` | Open the command palette |
+
+## Table navigation
+
+When a data table has focus, use the following keys to move through its rows:
+
+- **Arrow keys** — move the cursor one row up or down, or scroll left and right in wide tables.
+- **PageUp / PageDown** — scroll the table by a full page of visible rows at a time.
+- **Tab** — move focus between widgets (e.g. from the filter input to the jobs table, or from the jobs table to the detail panel).
+
+To give a table focus from the keyboard, press the corresponding global binding (`j` for Jobs, `n` for Nodes, `u` for Queues). For the Cluster grid, press `g` to switch to that tab.
+
+## Job filtering
+
+The **Filter jobs** input appears above the jobs table on the Jobs tab. It accepts one or more space-separated search terms. All terms must match — the filter is a logical AND across terms, and each term is matched against any column value in the row.
+
+For example:
+
+- `running` — shows only jobs where the `State` column contains "running"
+- `alice` — shows jobs where "alice" appears in any column (typically `User`)
+- `running alice` — shows jobs that are both running and submitted by alice
+- `gpu workq` — shows jobs that reference "gpu" in any column and belong to the `workq` queue
+
+Matching is case-insensitive. The table updates live as you type. Press `Tab` to move focus back to the table and navigate filtered results with the arrow keys.
+
+## Command palette
+
+Press `Ctrl+P` from anywhere in the application to open the command palette. The palette lists available commands with a search box at the top. Start typing to filter the list.
+
+Available commands include:
+
+- **Toggle detail panel** — same effect as pressing `d`, useful when a text input has keyboard focus and `d` would be typed into the field instead.
+- **Change theme** — opens a theme picker to switch between the bundled `pbs-dark`, `pbs-light`, `ansi-dark`, and `ansi-light` themes, as well as any themes provided by Textual itself.
+
+<Tip>
+  Use the command palette to switch themes at runtime — no restart required. The cluster grid and all tables update immediately to reflect the new color scheme.
+</Tip>
